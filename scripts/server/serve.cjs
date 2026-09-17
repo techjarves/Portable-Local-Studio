@@ -1897,7 +1897,12 @@ function resolveSystemLlamaServer() {
 }
 
 function probeLlmBackend(backend) {
-  if (!backend?.path || !fs.existsSync(backend.path)) {
+  if (
+    !backend?.path ||
+    !path.isAbsolute(backend.path) ||
+    !fs.existsSync(backend.path) ||
+    !fs.statSync(backend.path).isFile()
+  ) {
     return {
       ...backend,
       installed: false,
@@ -1913,6 +1918,7 @@ function probeLlmBackend(backend) {
       windowsHide: true,
       timeout: 10000,
       maxBuffer: 1024 * 1024,
+      shell: false,
     });
     const output = `${result.stdout || ""}\n${result.stderr || ""}`;
     const devices = parseLlamaDeviceList(output);
