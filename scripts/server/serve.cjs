@@ -4253,6 +4253,26 @@ async function startLlm(settings = {}) {
   throw new Error(`Text model failed on all available llama.cpp backends. Last failure: ${last?.error || "unknown error"}`);
 }
 
+// Older llama.cpp builds take --mmap/--mlock; newer ones only --load-mode. Read the
+// binary's --help once per path to know which it understands.
+const llamaServerHelpCache = new Map();
+function llamaServerSupportsFlag(binaryPath, flag) {
+  if (!llamaServerHelpCache.has(binaryPath)) {
+    let help = "";
+    try {
+      const result = spawnSync(binaryPath, ["--help"], {
+        encoding: "utf8",
+        windowsHide: true,
+        timeout: 10000,
+        maxBuffer: 4 * 1024 * 1024,
+      });
+      help = `${result.stdout || ""}\n${result.stderr || ""}`;
+    } catch (_) {}
+    llamaServerHelpCache.set(binaryPath, help);
+  }
+  return llamaServerHelpCache.get(binaryPath).includes(flag);
+}
+
 async function startLlmWithBackend(settings = {}, backend) {
   const filename = path.basename(String(settings.model || ""));
   const modelPath = path.join(LLM_MODELS, filename);
@@ -4402,13 +4422,19 @@ async function startLlmWithBackend(settings = {}, backend) {
                     backend.mode.includes("HIP") || backend.mode.includes("ROCm") ||
                     backend.mode.includes("Vulkan") || backend.mode.includes("Metal") ||
                     backend.mode.includes("SYCL");
-  if (!isGpuMode && llmSettings.mlock) {
-    args.push("--mlock");                    // ✅ Prevent OS swapping on CPU
-  }
-  
-  // All modes: memory-mapped loading for faster startup
-  if (llmSettings.mmap) {
-    args.push("--mmap");                     // ✅ Faster model loading
+  const lockMemory = !isGpuMode && llmSettings.mlock;
+  if (llamaServerSupportsFlag(backend.path, "--load-mode")) {
+    // llama.cpp b11000+ replaced --mmap/--mlock with --load-mode and rejects the old flags.
+    const loadMode = llmSettings.mmap ? (lockMemory ? "mmap+mlock" : "mmap") : (lockMemory ? "mlock" : "none");
+    args.push("--load-mode", loadMode);
+  } else {
+    if (lockMemory) {
+      args.push("--mlock");                    // ✅ Prevent OS swapping on CPU
+    }
+    // All modes: memory-mapped loading for faster startup
+    if (llmSettings.mmap) {
+      args.push("--mmap");                     // ✅ Faster model loading
+    }
   }
   
   if (llmSettings.enableThinking === false) {

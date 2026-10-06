@@ -1,17 +1,17 @@
 {
-  "llamaRelease": "b9668",
+  "llamaRelease": "b11418",
   "notes": "Portable llama.cpp backend manifest. Setup scripts may override the release with LLAMA_RELEASE or a script parameter.",
   "windows": {
     "cuda": "llama-{release}-bin-win-cuda-12.4-x64.zip",
     "vulkan": "llama-{release}-bin-win-vulkan-x64.zip",
     "sycl": "llama-{release}-bin-win-sycl-x64.zip",
-    "hip": "llama-{release}-bin-win-hip-x64.zip",
+    "hip": "llama-{release}-bin-win-rocm-10.0-x64.zip",
     "cpu": "llama-{release}-bin-win-cpu-x64.zip",
     "cudaRuntime": "cudart-llama-bin-win-cuda-12.4-x64.zip"
   },
   "linux": {
-    "cuda": "llama-{release}-bin-ubuntu-cuda-12.4-x64.tar.gz",
-    "rocm": "llama-{release}-bin-ubuntu-rocm-x64.tar.gz",
+    "cuda": "llama-{release}-bin-ubuntu-cuda-12.8-x64.tar.gz",
+    "rocm": "llama-{release}-bin-ubuntu-rocm-10.0-x64.tar.gz",
     "vulkanX64": "llama-{release}-bin-ubuntu-vulkan-x64.tar.gz",
     "vulkanArm64": "llama-{release}-bin-ubuntu-vulkan-arm64.tar.gz",
     "syclFp32": "llama-{release}-bin-ubuntu-sycl-fp32-x64.tar.gz",

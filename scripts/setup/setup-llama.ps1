@@ -1,4 +1,4 @@
-param([string]$Release = "b9668")
+param([string]$Release = "b11418")
 
 $ErrorActionPreference = "Stop"
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -206,7 +206,7 @@ try {
     }
 } catch {}
 if ($hasAmd) {
-    Try-InstallLlamaArchive -Variant "hip" -AssetName "llama-$Release-bin-win-hip-x64.zip" -Reason "AMD HIP acceleration"
+    Try-InstallLlamaArchive -Variant "hip" -AssetName "llama-$Release-bin-win-rocm-10.0-x64.zip" -Reason "AMD HIP acceleration"
 }
 # Intel Arc/Graphics detection for SYCL backend
 $hasIntel = $false

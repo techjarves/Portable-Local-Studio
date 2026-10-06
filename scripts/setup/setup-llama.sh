@@ -5,7 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
 APP_DIR="$ROOT_DIR/app"
 TOOLS_DIR="$APP_DIR/tools"
-RELEASE="${LLAMA_RELEASE:-b9668}"
+RELEASE="${LLAMA_RELEASE:-b11418}"
 PLATFORM="$(uname -s)"
 ARCH="$(uname -m)"
 
@@ -84,10 +84,10 @@ elif [[ "$PLATFORM" == "Linux" ]]; then
     download_and_extract "llama-$RELEASE-bin-ubuntu-arm64.tar.gz" "$APP_DIR/llm-backend/linux/cpu"
   else
     if has_command nvidia-smi || has_linux_gpu_vendor "0x10de"; then
-      download_and_extract_optional "llama-$RELEASE-bin-ubuntu-cuda-12.4-x64.tar.gz" "$APP_DIR/llm-backend/linux/cuda" "NVIDIA CUDA acceleration"
+      download_and_extract_optional "llama-$RELEASE-bin-ubuntu-cuda-12.8-x64.tar.gz" "$APP_DIR/llm-backend/linux/cuda" "NVIDIA CUDA acceleration"
     fi
     if has_command rocminfo || has_linux_gpu_vendor "0x1002"; then
-      download_and_extract_optional "llama-$RELEASE-bin-ubuntu-rocm-x64.tar.gz" "$APP_DIR/llm-backend/linux/rocm" "AMD ROCm acceleration"
+      download_and_extract_optional "llama-$RELEASE-bin-ubuntu-rocm-10.0-x64.tar.gz" "$APP_DIR/llm-backend/linux/rocm" "AMD ROCm acceleration"
     fi
     if has_linux_gpu_vendor "0x8086"; then
       download_and_extract_optional "llama-$RELEASE-bin-ubuntu-sycl-fp32-x64.tar.gz" "$APP_DIR/llm-backend/linux/sycl" "Intel SYCL acceleration"
