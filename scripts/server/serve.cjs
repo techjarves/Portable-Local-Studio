@@ -2005,9 +2005,15 @@ function getLlmBackendCandidates() {
   return probe.available;
 }
 
+// macOS writes "._name" AppleDouble files next to real files on exFAT and FAT drives.
+// They are never models or user data, so listings of the app's data folders skip them.
+function readdirVisible(dir) {
+  return fs.readdirSync(dir).filter((name) => !name.startsWith("._"));
+}
+
 function getLlmModels() {
   try {
-    return fs.readdirSync(LLM_MODELS)
+    return readdirVisible(LLM_MODELS)
       .filter((filename) => filename.toLowerCase().endsWith(".gguf"))
       .map((filename) => {
         const stats = fs.statSync(path.join(LLM_MODELS, filename));
@@ -2129,7 +2135,7 @@ function getSpeechModels() {
   const known = new Set(catalog.map((model) => model.filename.toLowerCase()));
   let custom = [];
   try {
-    custom = fs.readdirSync(SPEECH_MODELS)
+    custom = readdirVisible(SPEECH_MODELS)
       .filter((filename) => filename.toLowerCase().endsWith(".bin") && !known.has(filename.toLowerCase()))
       .map((filename) => {
         const sizeBytes = getPathSize(path.join(SPEECH_MODELS, filename));
@@ -2211,7 +2217,7 @@ function getTtsModels() {
   const known = new Set(catalog.map((model) => model.filename.toLowerCase()));
   let custom = [];
   try {
-    custom = fs.readdirSync(TTS_MODELS)
+    custom = readdirVisible(TTS_MODELS)
       .filter((filename) => filename.toLowerCase().endsWith(".json") && !known.has(filename.toLowerCase()))
       .map((filename) => {
         const manifest = readTtsManifest(filename) || {};
@@ -2392,7 +2398,7 @@ function saveTtsOutput(result) {
 
 function listTtsOutputs() {
   try {
-    return fs.readdirSync(TTS_OUTPUTS)
+    return readdirVisible(TTS_OUTPUTS)
       .filter((file) => file.toLowerCase().endsWith(".json"))
       .map((file) => {
         const filePath = path.join(TTS_OUTPUTS, file);
@@ -2604,7 +2610,7 @@ function saveTranscript(result) {
 
 function listTranscriptions() {
   try {
-    return fs.readdirSync(TRANSCRIPTIONS)
+    return readdirVisible(TRANSCRIPTIONS)
       .filter((file) => file.toLowerCase().endsWith(".json"))
       .map((file) => {
         const filePath = path.join(TRANSCRIPTIONS, file);
@@ -2954,28 +2960,28 @@ async function getHealth() {
       options: getBackendOptions(),
     },
     models: {
-      count: fs.existsSync(MODELS) ? fs.readdirSync(MODELS).filter(isModelFile).length : 0,
+      count: fs.existsSync(MODELS) ? readdirVisible(MODELS).filter(isModelFile).length : 0,
       totalBytes: getPathSize(MODELS),
       totalSize: formatBytes(getPathSize(MODELS)),
     },
     outputs: {
-      count: fs.existsSync(OUTPUTS) ? fs.readdirSync(OUTPUTS).filter((file) => file.toLowerCase().endsWith(".json")).length : 0,
+      count: fs.existsSync(OUTPUTS) ? readdirVisible(OUTPUTS).filter((file) => file.toLowerCase().endsWith(".json")).length : 0,
       totalBytes: getPathSize(OUTPUTS),
       totalSize: formatBytes(getPathSize(OUTPUTS)),
     },
     chat: {
-      count: fs.existsSync(CHAT_HISTORY) ? fs.readdirSync(CHAT_HISTORY).filter((file) => file.toLowerCase().endsWith(".json")).length : 0,
+      count: fs.existsSync(CHAT_HISTORY) ? readdirVisible(CHAT_HISTORY).filter((file) => file.toLowerCase().endsWith(".json")).length : 0,
       totalBytes: getPathSize(CHAT_HISTORY),
       totalSize: formatBytes(getPathSize(CHAT_HISTORY)),
     },
     speech: {
-      transcriptions: fs.existsSync(TRANSCRIPTIONS) ? fs.readdirSync(TRANSCRIPTIONS).filter((file) => file.toLowerCase().endsWith(".json")).length : 0,
+      transcriptions: fs.existsSync(TRANSCRIPTIONS) ? readdirVisible(TRANSCRIPTIONS).filter((file) => file.toLowerCase().endsWith(".json")).length : 0,
       totalBytes: getPathSize(TRANSCRIPTIONS),
       totalSize: formatBytes(getPathSize(TRANSCRIPTIONS)),
     },
     tts: {
-      models: fs.existsSync(TTS_MODELS) ? fs.readdirSync(TTS_MODELS).filter((file) => file.toLowerCase().endsWith(".json")).length : 0,
-      outputs: fs.existsSync(TTS_OUTPUTS) ? fs.readdirSync(TTS_OUTPUTS).filter((file) => file.toLowerCase().endsWith(".json")).length : 0,
+      models: fs.existsSync(TTS_MODELS) ? readdirVisible(TTS_MODELS).filter((file) => file.toLowerCase().endsWith(".json")).length : 0,
+      outputs: fs.existsSync(TTS_OUTPUTS) ? readdirVisible(TTS_OUTPUTS).filter((file) => file.toLowerCase().endsWith(".json")).length : 0,
       runtimeInstalled: getTtsRuntimeStatus().installed,
       totalBytes: getPathSize(TTS_MODELS) + getPathSize(TTS_OUTPUTS) + getPathSize(TTS_CACHE),
       totalSize: formatBytes(getPathSize(TTS_MODELS) + getPathSize(TTS_OUTPUTS) + getPathSize(TTS_CACHE)),
@@ -3024,7 +3030,7 @@ function getCleanupCandidates() {
   }
 
   if (fs.existsSync(MODELS)) {
-    for (const item of fs.readdirSync(MODELS)) {
+    for (const item of readdirVisible(MODELS)) {
       if (item.toLowerCase().endsWith(".part") || item.toLowerCase().endsWith(".tmp")) {
         addCleanupCandidate(candidates, `partial-model-${item}`, path.join(MODELS, item), "Incomplete model download/import file.", { allowUserData: true });
       }
@@ -4040,7 +4046,7 @@ function startCoreMLLoadHeartbeat(proc) {
 
 function getDefaultModel() {
   try {
-    const files = fs.readdirSync(MODELS).filter(isModelFile);
+    const files = readdirVisible(MODELS).filter(isModelFile);
     return files.length ? path.join(MODELS, files[0]) : null;
   } catch (_) { return null; }
 }
@@ -4082,7 +4088,7 @@ function chooseAutoContext(modelFilename, isGpu) {
   let projectorSizeGb = 0;
   if (isVisionModel) {
     try {
-      const files = fs.readdirSync(LLM_MODELS);
+      const files = readdirVisible(LLM_MODELS);
       const projector = files.find((file) => {
         const lower = file.toLowerCase();
         return lower.endsWith(".gguf") && lower.includes("mmproj");
@@ -4332,7 +4338,7 @@ async function startLlmWithBackend(settings = {}, backend) {
     }
     if (!mmprojPath) {
       try {
-        const files = fs.readdirSync(LLM_MODELS);
+        const files = readdirVisible(LLM_MODELS);
         let bestMatch = null;
         
         // 1. Match by Hugging Face repository prefix (e.g., "unsloth--gemma-4-E2B-it-qat-GGUF--")
@@ -5651,7 +5657,7 @@ function saveChatConversation(conversation = {}) {
 
 function listChatConversations() {
   try {
-    return fs.readdirSync(CHAT_HISTORY)
+    return readdirVisible(CHAT_HISTORY)
       .filter((file) => file.toLowerCase().endsWith(".json"))
       .map((file) => {
         try {
@@ -5741,7 +5747,7 @@ function saveGeneratedOutput(imageDataUrl, metadata = {}) {
 
 function listGeneratedOutputs() {
   try {
-    return fs.readdirSync(OUTPUTS)
+    return readdirVisible(OUTPUTS)
       .filter(file => file.toLowerCase().endsWith(".json"))
       .map(file => {
         try {
@@ -6815,7 +6821,7 @@ async function getLlmfitRecommendations(useCase = "chat", limit = 10) {
   // GET /api/models — list available model files
   if (req.url === "/api/models" && req.method === "GET") {
     try {
-      let files = fs.readdirSync(MODELS).filter(isModelFile).map(getModelInfo);
+      let files = readdirVisible(MODELS).filter(isModelFile).map(getModelInfo);
       if (downloadState.active && downloadState.filename) {
         files = files.filter(model => model.filename !== downloadState.filename);
       }

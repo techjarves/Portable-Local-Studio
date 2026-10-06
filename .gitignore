@@ -46,4 +46,5 @@ __pycache__/
 .vscode/
 .idea/
 .DS_Store
+._*
 Thumbs.db
