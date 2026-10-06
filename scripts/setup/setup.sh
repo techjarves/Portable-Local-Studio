@@ -692,6 +692,14 @@ if ln -s "$OS_LABEL" "$TEST_LINK" 2>/dev/null; then
 else
   USE_SYMLINKS=false
 fi
+# macOS fakes symlinks on exFAT/FAT drives, and Linux and Windows see them as plain
+# files. Use the directory swap there too, matching mac.sh.
+if [[ "$PLATFORM" == "Darwin" ]]; then
+  FRONTEND_DEVICE="$(stat -f %Sd "$FRONTEND_DIR" 2>/dev/null || true)"
+  case "$(mount | awk -v d="/dev/$FRONTEND_DEVICE" '$1 == d { sub(/^[^(]*\(/, ""); sub(/,.*$/, ""); print; exit }')" in
+    exfat|msdos) USE_SYMLINKS=false ;;
+  esac
+fi
 
 if [ "$USE_SYMLINKS" = true ]; then
   if [[ -d "$FRONTEND_NODE_MODULES" && ! -L "$FRONTEND_NODE_MODULES" ]]; then
