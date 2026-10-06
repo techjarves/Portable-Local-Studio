@@ -7253,7 +7253,8 @@ async function getLlmfitRecommendations(useCase = "chat", limit = 10) {
 
 server.timeout = 0; // Disable socket timeout for large model uploads/downloads
 
-server.listen(PORT_FRONTEND, "0.0.0.0", () => {
+// Local-only by default: the UI has no login. Set UAIS_HOST=0.0.0.0 to share it on your network.
+server.listen(PORT_FRONTEND, process.env.UAIS_HOST || "127.0.0.1", () => {
   console.log("");
   console.log("  ============================================================");
   console.log("   UNCENSORED AI STUDIO      |  Running");

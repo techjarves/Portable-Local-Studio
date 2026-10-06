@@ -233,6 +233,11 @@ Ensure you have a modern web browser installed. Follow the quick guide below for
 </details>
 
 <details>
+  <summary><strong> Opening the studio from another device on your network</strong></summary>
+  <p>The web interface only accepts connections from the computer it runs on, because it has no login. To reach it from another device on purpose, start it with <code>UAIS_HOST=0.0.0.0</code> (for example <code>UAIS_HOST=0.0.0.0 ./linux.sh</code>, or <code>set UAIS_HOST=0.0.0.0</code> before running <code>windows.bat</code>). Anyone on that network can then use it.</p>
+</details>
+
+<details>
   <summary><strong> Linux ROCm not loading for AMD Radeon GPUs</strong></summary>
   <p>Ensure your AMD GPU hardware and host kernel are fully compatible with ROCm 7.13. If ROCm fails to initialize correctly, the application will automatically fall back to Vulkan acceleration.</p>
 </details>
