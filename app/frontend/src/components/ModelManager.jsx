@@ -517,16 +517,10 @@ function ModelManager({
   }, [activeModelType]);
 
   useEffect(() => {
-    if (activeTab === "models") {
-      fetchModels();
-      checkActiveDownload();
-    }
-  }, [activeTab, fetchModels]);
-
-  useEffect(() => {
+    if (activeTab !== "models") return;
     fetchModels();
     checkActiveDownload();
-  }, [activeModelType]);
+  }, [activeTab, activeModelType, fetchModels]);
 
   useEffect(() => {
     let cancelled = false;
