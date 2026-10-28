@@ -61,6 +61,40 @@ It unifies four major local AI capabilities into one high-performance desktop in
 *   **Live Performance Monitor:** Track CPU, RAM, GPU, and VRAM utilization in real-time directly inside the web UI.
 *   **Local Output Gallery:** Saves generated images side-by-side with prompt parameters and metadata JSON files.
 
+### Optional online chat search
+
+In Text Chat, load a model and enable **Web** to add numbered web sources to
+your prompt. DuckDuckGo remains the default. Use the adjacent provider selector
+to choose **Parallel (no API key)** for free search and page extraction through
+[Parallel Search MCP](https://docs.parallel.ai/integrations/mcp/search-mcp).
+Anonymous search uses Fast mode; no account or API key is needed. The provider
+choice is saved in this browser, while Web starts disabled each time the panel
+opens.
+
+With either provider, the loaded model plans the search query from the recent
+conversation and skips searching entirely when the message does not need it.
+Local model inference stays on your device, but the planned query is sent to the
+selected provider. Parallel receives that query and, when a result has no
+excerpt, its public URL for extraction. Keep Web off for offline chats or
+sensitive prompts. Parallel is a fixed search provider; this does not enable
+arbitrary MCP servers or model-selected tools.
+
+Parallel's free service has usage limits. Search errors are shown without
+switching providers. Its date preferences are relevance hints, rather than
+DuckDuckGo's date filters. Search excerpts usually suffice, so pages are only
+fetched when their excerpts are missing. New or cleared chats get a fresh opaque
+search session ID; follow-up searches reuse it while the panel remains open.
+Sending just a public HTTP or HTTPS URL skips query planning, and with Parallel
+selected that page is extracted directly. IPv6 address literals, private IPv4
+ranges, localhost names and `.local` names are filtered; the app makes no local
+requests to extracted URLs.
+
+API clients can select `"provider": "parallel"` in `POST /api/web-search`, or
+`"webSearchProvider": "parallel"` with `"useWeb": true` in `POST /api/llm/chat`.
+To correlate follow-up calls, supply one random UUID per conversation as
+`sessionId` (web search) or `webSearchSessionId` (chat), and reuse it on retries.
+Omitting it starts a standalone search session. Never use personal data as the ID.
+
 ---
 
 ## <a id="workspace-architecture"></a>⚙️ Workspace & Engine Architecture

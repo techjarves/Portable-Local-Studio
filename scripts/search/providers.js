@@ -101,6 +101,13 @@ async function webSearch(query, options = {}) {
   return searchDuckDuckGo(trimmed, options);
 }
 
+function resolveSearchProvider(provider) {
+  const value = provider || "duckduckgo";
+  if (!["duckduckgo", "parallel"].includes(value)) throw new Error("Unknown web search provider.");
+  return value;
+}
+
 module.exports = {
   webSearch,
+  resolveSearchProvider,
 };

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createSearchSessions, readSearchProvider, saveSearchProvider } from "../services/web-search";
 import { Bot, LoaderCircle, Send, Trash2, Square, History, Paperclip, X, ChevronDown, Globe2, Plus } from "lucide-react";
 import {
   getDownloadProgress,
@@ -139,6 +140,9 @@ function TextChat({
   const [input, setInput] = useState("");
   const [isBusy, setIsBusy] = useState(false);
   const [useWebSearch, setUseWebSearch] = useState(false);
+  const [webSearchProvider, setWebSearchProvider] = useState(readSearchProvider);
+  const searchSessionsRef = useRef(null);
+  if (!searchSessionsRef.current) searchSessionsRef.current = createSearchSessions();
   const [webTimeFilter, setWebTimeFilter] = useState("any");
   const [loadingModel, setLoadingModel] = useState(null);
   const [tokenUsage, setTokenUsage] = useState({
@@ -705,6 +709,9 @@ function TextChat({
         seed: textSettings?.seed,
         enableThinking: thinkingEnabled,
         useWeb: useWebSearch,
+        webSearchProvider,
+        webSearchSessionId: useWebSearch && webSearchProvider === "parallel"
+          ? searchSessionsRef.current.forConversation(convId) : undefined,
         timeFilter: webTimeFilter,
         signal: controller.signal,
       }, (_token, fullText, _reasoningToken, fullReasoning) => {
@@ -861,6 +868,7 @@ function TextChat({
   };
 
   const handleClearChat = () => {
+    searchSessionsRef.current.reset(activeConversationId);
     setMessages([]);
     setTokenUsage({ prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 });
     if (activeConversationId) {
@@ -1262,6 +1270,21 @@ function TextChat({
                   <Globe2 size={14} />
                   <span>Web</span>
                 </button>
+                {useWebSearch && (
+                  <select
+                    aria-label="Web search provider"
+                    value={webSearchProvider}
+                    disabled={isBusy}
+                    onChange={(event) => {
+                      setWebSearchProvider(event.target.value);
+                      saveSearchProvider(event.target.value);
+                    }}
+                    title="Online search sends a query planned from your chat to the selected provider. Parallel also extracts selected public URLs."
+                  >
+                    <option value="duckduckgo">DuckDuckGo</option>
+                    <option value="parallel">Parallel (no API key)</option>
+                  </select>
+                )}
 
                 {status.ready && supportsThinking && (
                   <button

@@ -455,6 +455,8 @@ export async function chatWithLlm(messages, options = {}) {
       seed: options.seed,
       stop: options.stop,
       useWeb: options.useWeb === true,
+      webSearchProvider: options.webSearchProvider,
+      webSearchSessionId: options.webSearchSessionId,
       timeFilter: options.timeFilter || "any",
     }),
   });
@@ -486,6 +488,8 @@ export async function streamChatWithLlm(messages, options = {}, onToken = () => 
       seed: options.seed,
       stop: options.stop,
       useWeb: options.useWeb === true,
+      webSearchProvider: options.webSearchProvider,
+      webSearchSessionId: options.webSearchSessionId,
       timeFilter: options.timeFilter || "any",
     }),
   };
@@ -602,9 +606,12 @@ export async function streamChatWithLlm(messages, options = {}, onToken = () => 
 export async function searchWeb(query, options = {}) {
   const res = await fetch("/api/web-search", {
     method: "POST",
+    signal: options.signal,
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       query,
+      provider: options.provider,
+      sessionId: options.sessionId,
       timeFilter: options.timeFilter || "any",
       resultLimit: options.resultLimit,
       fetchLimit: options.fetchLimit,

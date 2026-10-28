@@ -10,6 +10,7 @@ const net      = require("net");
 const os       = require("os");
 const path     = require("path");
 const { spawn, spawnSync, execSync, exec, execFile } = require("child_process");
+const { randomUUID } = require("crypto");
 const { comprehensiveWebSearch } = require("../search/core");
 
 // HTTP keep-alive agent for llama-server (eliminates TCP handshake per request)
@@ -6636,11 +6637,16 @@ async function planWebSearchQuery(messages) {
   }
 }
 
-async function augmentMessagesWithWebSearch(messages, body) {
+async function augmentMessagesWithWebSearch(messages, body, options = {}) {
   if (body.useWeb !== true && body.use_web !== true) {
     return { messages, webSources: [], webContext: "" };
   }
   let query = String(body.webQuery || body.query || "").trim();
+  // A message that is nothing but a URL already is the request, so planning a query
+  // from it would throw away the page the user asked about.
+  if (!query && /^https?:\/\/\S+$/i.test(getLastUserQuery(messages))) {
+    query = getLastUserQuery(messages);
+  }
   if (!query) {
     const planned = llmReady ? await planWebSearchQuery(messages) : null;
     if (planned === "") return { messages, webSources: [], webContext: "", webSkipped: true };
@@ -6652,8 +6658,11 @@ async function augmentMessagesWithWebSearch(messages, body) {
   const result = await comprehensiveWebSearch(query, {
     timeFilter: body.timeFilter || body.time_filter || "any",
     resultLimit: body.webResultLimit || 5,
-    fetchLimit: body.webFetchLimit || 3,
+    fetchLimit: body.webFetchLimit ?? 3,
     cacheDir: WEB_SEARCH_CACHE,
+    provider: body.webSearchProvider,
+    sessionId: body.webSearchSessionId,
+    signal: options.signal,
   });
   if (!result.context || !result.sources.length) {
     return { messages, webSources: [], webContext: "" };
@@ -6678,7 +6687,18 @@ async function doLlmChat(req, res, body, retryCount = 0) {
   try {
     const isStream = body.stream === true;
     const rawMessages = Array.isArray(body.messages) ? body.messages : [];
-    const webAugmentation = await augmentMessagesWithWebSearch(rawMessages, body);
+    // Keep a standalone API request's search identity across an out-of-memory retry too.
+    body.webSearchSessionId ||= randomUUID();
+    const searchAbort = new AbortController();
+    const cancelSearch = () => { if (!res.writableEnded) searchAbort.abort(); };
+    res.once("close", cancelSearch);
+    let webAugmentation;
+    try {
+      webAugmentation = await augmentMessagesWithWebSearch(rawMessages, body, { signal: searchAbort.signal });
+    } finally {
+      res.removeListener("close", cancelSearch);
+    }
+    if (res.destroyed) return;
     const requestData = JSON.stringify({
       model: llmSettings.model || "local-model",
       messages: webAugmentation.messages,
@@ -6983,7 +7003,10 @@ async function getLlmfitRecommendations(useCase = "chat", limit = 10) {
     return json(res, 200, {
       ok: true,
       provider: "duckduckgo",
-      providers: [{ key: "duckduckgo", name: "DuckDuckGo", requiresApiKey: false, active: true }],
+      providers: [
+        { key: "duckduckgo", name: "DuckDuckGo", requiresApiKey: false, active: true },
+        { key: "parallel", name: "Parallel", requiresApiKey: false, active: false },
+      ],
       cachePath: WEB_SEARCH_CACHE,
       defaults: { resultLimit: 5, fetchLimit: 3, timeFilter: "any" },
     });
@@ -6992,16 +7015,24 @@ async function getLlmfitRecommendations(useCase = "chat", limit = 10) {
   if (req.url === "/api/web-search" && req.method === "POST") {
     const body = await readJsonBody(req, res);
     if (!body) return;
+    const searchAbort = new AbortController();
+    const cancelSearch = () => { if (!res.writableEnded) searchAbort.abort(); };
+    res.once("close", cancelSearch);
     try {
       const result = await comprehensiveWebSearch(body.query || body.q || "", {
         timeFilter: body.timeFilter || body.time_filter || "any",
         resultLimit: body.resultLimit || 5,
-        fetchLimit: body.fetchLimit || 3,
+        fetchLimit: body.fetchLimit ?? 3,
         cacheDir: WEB_SEARCH_CACHE,
+        provider: body.provider,
+        sessionId: body.sessionId,
+        signal: searchAbort.signal,
       });
       return json(res, 200, { ok: true, ...result });
     } catch (err) {
       return json(res, 500, { ok: false, error: err.message || String(err) });
+    } finally {
+      res.removeListener("close", cancelSearch);
     }
   }
 
