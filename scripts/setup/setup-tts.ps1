@@ -30,8 +30,19 @@ if (-not (Test-Path $nodeExe) -or -not (Test-Path $npmCmd)) {
 }
 
 $packageJson = Join-Path $runtimeDir "package.json"
-if (-not (Test-Path $packageJson)) {
-    '{"private":true,"type":"module","dependencies":{"kokoro-js":"^1.2.1"}}' | Out-File -FilePath $packageJson -Encoding utf8
+$needsWrite = $true
+if (Test-Path $packageJson) {
+    $content = Get-Content -Raw -Path $packageJson
+    if ($content -match "node-addon-api" -and $content -match "node-gyp") {
+        $needsWrite = $false
+    }
+}
+if ($needsWrite) {
+    '{"private":true,"type":"module","dependencies":{"kokoro-js":"^1.2.1","node-addon-api":"^7.1.1","node-gyp":"^10.0.0"}}' | Out-File -FilePath $packageJson -Encoding utf8
+    $packageLock = Join-Path $runtimeDir "package-lock.json"
+    if (Test-Path $packageLock) {
+        Remove-Item -Force $packageLock
+    }
 }
 
 Push-Location $runtimeDir

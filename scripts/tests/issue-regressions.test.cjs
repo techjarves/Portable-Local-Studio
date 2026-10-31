@@ -145,6 +145,14 @@ test("Kokoro setup uses pinned online dependencies and skips optional CUDA paylo
   }
 });
 
+test("issue 101: Kokoro setup declares build dependencies for sharp compilation", () => {
+  for (const relativePath of ["scripts/setup/setup-tts.ps1", "scripts/setup/setup-tts.sh"]) {
+    const setup = read(relativePath);
+    assert.match(setup, /node-addon-api/);
+    assert.match(setup, /node-gyp/);
+  }
+});
+
 test("model imports retry locked files and explain large-drive failures", () => {
   const server = read("scripts/server/serve.cjs");
   assert.match(server, /function withFileRetrySync/);
