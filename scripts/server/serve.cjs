@@ -5251,7 +5251,10 @@ function startImageBackendDownload(backendId, redirectCount = 0, redirectUrl = "
     response.on("data", (chunk) => {
       downloadedBytes += chunk.length;
       downloadState.downloadedBytes = downloadedBytes;
-      fileStream.write(chunk);
+      if (!fileStream.write(chunk)) {
+        response.pause();
+        fileStream.once("drain", () => response.resume());
+      }
       const now = Date.now();
       const elapsed = (now - lastTime) / 1000;
       if (elapsed >= 0.5) {
@@ -5502,7 +5505,11 @@ function startModelDownload(url, overrideFilename = null, targetDir = MODELS, ki
     response.on("data", (chunk) => {
       downloadedBytes += chunk.length;
       downloadState.downloadedBytes = downloadedBytes;
-      fileStream.write(chunk);
+      // Wait for the disk to catch up so slow drives (USB sticks) don't buffer the whole file in memory
+      if (!fileStream.write(chunk)) {
+        response.pause();
+        fileStream.once("drain", () => response.resume());
+      }
 
       const now = Date.now();
       const elapsed = (now - lastTime) / 1000;
