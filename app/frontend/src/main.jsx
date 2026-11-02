@@ -5,9 +5,11 @@ import "@fontsource-variable/inter";
 // (src/styles/*.css) comes later in the cascade and can refine the shared classes
 import "./App.css";
 import App from "./App";
+import WorkIntegration from "./components/WorkIntegration";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <App />
+    <WorkIntegration />
   </React.StrictMode>,
 );
