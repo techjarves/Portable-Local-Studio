@@ -200,6 +200,16 @@ test("issue 96: model downloads reject repository pages and HTML responses", () 
   assert.match(server, /content-type"\] \|\| ""\)\.toLowerCase\(\)\.includes\("text\/html"\)/);
 });
 
+test("issue 106: explicit web searches bypass unreliable model query planning", () => {
+  const { getExplicitWebSearchQuery } = require("../search/intent");
+  const server = read("scripts/server/serve.cjs");
+
+  assert.equal(getExplicitWebSearchQuery("Search the web for the latest CUDA release"), "Search the web for the latest CUDA release");
+  assert.equal(getExplicitWebSearchQuery("What is the current weather in Seattle?"), "What is the current weather in Seattle?");
+  assert.equal(getExplicitWebSearchQuery("Hello, can you explain this code?"), null);
+  assert.match(server, /async function planWebSearchQuery\(messages\) \{\s+const explicitQuery = require\("\.\.\/search\/intent"\)\.getExplicitWebSearchQuery\(getLastUserQuery\(messages\)\);\s+if \(explicitQuery\) return explicitQuery;/);
+});
+
 test("issue 85: chat shows reasoning, scrolls only the message list, renders tables, math and PDFs", () => {
   const chat = read("app/frontend/src/components/TextChat.jsx");
   assert.doesNotMatch(chat, /<ThinkingBlock/);
