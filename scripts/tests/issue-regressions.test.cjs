@@ -89,6 +89,56 @@ test("web search preserves percent encoding in DuckDuckGo destination URLs", asy
   assert.deepEqual(results.map((result) => result.url), urls);
 });
 
+test("chat streams propagate backend and consumer errors", async (t) => {
+  const { streamChatWithLlm } = await import(pathToFileURL(path.join(root, "app/frontend/src/services/api.js")).href);
+  const delta = { choices: [{ delta: { content: "Partial answer" } }] };
+  for (const scenario of [
+    { name: "error before content", events: [{ error: { message: "Context size exceeded" } }], error: "Context size exceeded" },
+    { name: "error after partial content", events: [delta, { error: { message: "Backend ran out of memory" } }], error: "Backend ran out of memory" },
+    { name: "string error", events: [delta, { error: "Backend stopped" }], error: "Backend stopped" },
+    { name: "consumer error", events: [delta], error: "Rendering failed", onToken() { throw new Error("Rendering failed"); } },
+  ]) {
+    await t.test(scenario.name, async (t) => {
+      const body = new ReadableStream({
+        start(controller) {
+          const events = scenario.events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("");
+          controller.enqueue(new TextEncoder().encode(events + "data: [DONE]\n\n"));
+          controller.close();
+        },
+      });
+      t.mock.method(global, "fetch", async () => new Response(body));
+      await assert.rejects(streamChatWithLlm([], {}, scenario.onToken || (() => {})), { message: scenario.error });
+      assert.equal(body.locked, false);
+    });
+  }
+});
+
+test("chat streams preserve fragmented content, reasoning, sources and metadata", async (t) => {
+  const { streamChatWithLlm } = await import(pathToFileURL(path.join(root, "app/frontend/src/services/api.js")).href);
+  const sources = [{ title: "Example", url: "https://example.com/" }];
+  const usage = { completion_tokens: 1 };
+  const timings = { predicted_ms: 10 };
+  const events = [
+    `event: web_sources\r\ndata: ${JSON.stringify({ sources })}\r\n\r\n`,
+    `data: ${JSON.stringify({ choices: [{ delta: { reasoning_content: "Thinking" } }] })}\n\n`,
+    `data: ${JSON.stringify({ choices: [{ delta: { content: "Caf\u00e9" }, finish_reason: "stop" }], usage, timings })}\n\n`,
+    "data: [DONE]\n\n",
+  ];
+  const bytes = new TextEncoder().encode(events.join(""));
+  const body = new ReadableStream({
+    start(controller) {
+      for (const byte of bytes) controller.enqueue(Uint8Array.of(byte));
+      controller.close();
+    },
+  });
+  t.mock.method(global, "fetch", async () => new Response(body));
+  const updates = [];
+  const result = await streamChatWithLlm([], {}, (...args) => updates.push(args));
+  assert.deepEqual(result, { content: "Caf\u00e9", reasoningContent: "Thinking", webSources: sources, usage, timings, finishReason: "stop" });
+  assert.equal(updates.length, 2);
+  assert.equal(body.locked, false);
+});
+
 test("slow image generation has no fixed proxy timeout and blocks destructive restarts", () => {
   const server = read("scripts/server/serve.cjs");
   assert.match(server, /function proxyImageBackendRequest[\s\S]*?timeout:\s*0/);
