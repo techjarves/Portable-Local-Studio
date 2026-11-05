@@ -6681,6 +6681,8 @@ function getLastUserQuery(messages) {
 // standalone query that resolves references to earlier turns ("what about its price?").
 // Returns "" when the model decides no search is needed, or null if planning failed.
 async function planWebSearchQuery(messages) {
+  const explicitQuery = require("../search/intent").getExplicitWebSearchQuery(getLastUserQuery(messages));
+  if (explicitQuery) return explicitQuery;
   const recent = messages
     .filter((message) => message?.role === "user" || message?.role === "assistant")
     .slice(-6)
