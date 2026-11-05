@@ -54,7 +54,7 @@ function extractDuckDuckGoUrl(rawHref) {
   try {
     const parsed = new URL(href, "https://duckduckgo.com");
     const uddg = parsed.searchParams.get("uddg");
-    if (uddg) return decodeURIComponent(uddg);
+    if (uddg) return uddg;
     if (parsed.protocol === "http:" || parsed.protocol === "https:") return parsed.toString();
   } catch (_) {}
   return "";

@@ -64,6 +64,31 @@ test("text-to-image sends seed and sampling settings to sdapi", async () => {
   }
 });
 
+test("web search preserves percent encoding in DuckDuckGo destination URLs", async (t) => {
+  const { EventEmitter } = require("node:events");
+  const { Readable } = require("node:stream");
+  const { webSearch } = require("../search/providers");
+  const urls = [
+    "https://example.com/path%2Fsegment?q=a%26b&literal=%2520",
+    "https://example.com/discount?value=50%25",
+    "https://example.com/caf%C3%A9?q=%E4%B8%AD%E6%96%87",
+    "https://example.com/plain?q=hello+world",
+  ];
+  const html = urls.map((url, index) => {
+    const params = new URLSearchParams({ uddg: url, rut: "tracking" });
+    const href = `//duckduckgo.com/l/?${params}`.replaceAll("&", "&amp;");
+    return `<a class="result__a" href="${href}">Result ${index}</a>`;
+  }).join("\n");
+  t.mock.method(require("node:https"), "get", (_url, _options, callback) => {
+    const response = Readable.from([html]);
+    response.statusCode = 200;
+    callback(response);
+    return new EventEmitter();
+  });
+  const results = await webSearch("test query");
+  assert.deepEqual(results.map((result) => result.url), urls);
+});
+
 test("slow image generation has no fixed proxy timeout and blocks destructive restarts", () => {
   const server = read("scripts/server/serve.cjs");
   assert.match(server, /function proxyImageBackendRequest[\s\S]*?timeout:\s*0/);
