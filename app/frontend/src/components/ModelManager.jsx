@@ -639,6 +639,8 @@ function ModelManager({
   }, [activeTab, activeModelType, fetchModels]);
 
   useEffect(() => {
+    if (activeTab !== "models") return;
+
     let cancelled = false;
     const updateBackendInfo = async () => {
       try {
@@ -689,7 +691,7 @@ function ModelManager({
       cancelled = true;
       clearInterval(interval);
     };
-  }, [serverRunning, loadingModelId]);
+  }, [activeTab, serverRunning, loadingModelId]);
 
   const checkActiveDownload = async () => {
     try {
