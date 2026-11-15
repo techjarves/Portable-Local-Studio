@@ -3712,25 +3712,75 @@ html[data-theme^="dark"] .settings-subsection:hover {
   font-size: 0.88em;
 }
 
-.markdown-code-block {
-  padding: 12px 14px;
+.markdown-code-wrapper {
+  margin: 10px 0;
   border: 1px solid var(--border-color);
   border-radius: 12px;
-  background: var(--md-sys-color-surface);
-  color: var(--md-sys-color-on-surface);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.86rem;
-  line-height: 1.55;
-  overflow-x: auto;
-  white-space: pre-wrap;
-  word-break: break-word;
+  background: #2d2d2d;
+  overflow: hidden;
+}
+
+.markdown-code-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: rgba(0, 0, 0, 0.25);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  color: #a3a3a3;
+  user-select: none;
 }
 
 .markdown-code-lang {
-  margin-bottom: 6px;
   font-family: var(--font-sans);
   font-size: 0.75rem;
-  color: var(--md-sys-color-outline);
+  color: #a3a3a3;
+  font-weight: 500;
+  text-transform: lowercase;
+}
+
+.markdown-code-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  border: none;
+  color: #a3a3a3;
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 2px 7px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.markdown-code-copy-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #f4f4f4;
+}
+
+pre.markdown-code-block {
+  margin: 0 !important;
+  padding: 12px 14px !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: #ccc;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  overflow-x: auto;
+  white-space: pre;
+  word-break: normal;
+}
+
+pre.markdown-code-block code {
+  background: transparent !important;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  padding: 0;
 }
 
 .chat-table-wrap {

@@ -16,6 +16,7 @@
     "katex": "^0.18.11",
     "lucide-react": "^1.17.0",
     "pdfjs-dist": "^4.10.38",
+    "prismjs": "^1.30.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },

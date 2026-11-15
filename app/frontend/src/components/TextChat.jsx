@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { LoaderCircle, Trash2, Square, X, ChevronDown, Globe2, Plus, PenLine, Lightbulb, Zap, FileText, ArrowUp, Brain, Mic, AudioLines, Image as ImageIcon, PanelLeft } from "lucide-react";
+import { LoaderCircle, Trash2, Square, X, ChevronDown, Globe2, Plus, PenLine, Lightbulb, Zap, FileText, ArrowUp, Brain, Mic, AudioLines, Image as ImageIcon, PanelLeft, Copy, Check } from "lucide-react";
 import {
   getBackendStatus,
   stopServer,
@@ -13,6 +13,21 @@ import {
 import katex from "katex";
 import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import "katex/dist/katex.min.css";
+import Prism from "prismjs";
+import "prismjs/themes/prism-tomorrow.css";
+import "prismjs/components/prism-c";
+import "prismjs/components/prism-cpp";
+import "prismjs/components/prism-csharp";
+import "prismjs/components/prism-java";
+import "prismjs/components/prism-python";
+import "prismjs/components/prism-bash";
+import "prismjs/components/prism-json";
+import "prismjs/components/prism-yaml";
+import "prismjs/components/prism-sql";
+import "prismjs/components/prism-rust";
+import "prismjs/components/prism-go";
+import "prismjs/components/prism-typescript";
+import "prismjs/components/prism-markdown";
 
 // Splits model reasoning from the answer. Reasoning is always extracted (and shown collapsed
 // when Deep Think is off), because some models think even when it was not requested.
@@ -1312,6 +1327,93 @@ function parseInlineMarkdown(text) {
   });
 }
 
+function normalizeLanguage(lang) {
+  if (!lang) return "";
+  const lower = String(lang).toLowerCase().trim();
+  const map = {
+    js: "javascript",
+    ts: "typescript",
+    jsx: "javascript",
+    tsx: "typescript",
+    py: "python",
+    python3: "python",
+    sh: "bash",
+    shell: "bash",
+    zsh: "bash",
+    yml: "yaml",
+    md: "markdown",
+    golang: "go",
+    rs: "rust",
+    cs: "csharp",
+    "c++": "cpp",
+    "c#": "csharp",
+    html: "markup",
+    xml: "markup",
+    svg: "markup",
+  };
+  return map[lower] || lower;
+}
+
+function CodeBlock({ code, lang }) {
+  const [copied, setCopied] = useState(false);
+  const normalized = normalizeLanguage(lang);
+  const trimmedCode = (code || "").replace(/\r\n/g, "\n").trim();
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(trimmedCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // ignore clipboard error
+    }
+  };
+
+  let highlighted = null;
+  const grammar = normalized ? Prism.languages[normalized] : null;
+  if (grammar) {
+    try {
+      highlighted = Prism.highlight(trimmedCode, grammar, normalized);
+    } catch {
+      highlighted = null;
+    }
+  } else if (normalized && Prism.languages.clike) {
+    try {
+      highlighted = Prism.highlight(trimmedCode, Prism.languages.clike, "clike");
+    } catch {
+      highlighted = null;
+    }
+  }
+
+  return (
+    <div className="markdown-code-wrapper">
+      <div className="markdown-code-header">
+        <span className="markdown-code-lang">{lang || "code"}</span>
+        <button
+          type="button"
+          className="markdown-code-copy-btn"
+          onClick={handleCopy}
+          title={copied ? "Copied!" : "Copy code"}
+          aria-label={copied ? "Copied!" : "Copy code"}
+        >
+          {copied ? <Check size={13} /> : <Copy size={13} />}
+          <span>{copied ? "Copied" : "Copy"}</span>
+        </button>
+      </div>
+      <pre className={`markdown-code-block language-${normalized || "none"}`}>
+        {highlighted ? (
+          <code
+            className={`language-${normalized || "clike"}`}
+            dangerouslySetInnerHTML={{ __html: highlighted }}
+          />
+        ) : (
+          <code>{trimmedCode}</code>
+        )}
+      </pre>
+    </div>
+  );
+}
+
 export function MarkdownRenderer({ content }) {
   if (typeof content !== 'string') return null;
 
@@ -1329,15 +1431,10 @@ export function MarkdownRenderer({ content }) {
           return <MathFormula key={index} tex={part.slice(2, -2).trim()} display />;
         }
         if (part.startsWith("```") && part.endsWith("```")) {
-          const match = part.match(/```(\w*)\n([\s\S]*?)```/);
-          const lang = match ? match[1] : "";
+          const match = part.match(/^```([^\r\n]*)\r?\n?([\s\S]*?)```$/);
+          const lang = match ? match[1].trim() : "";
           const code = match ? match[2] : part.slice(3, -3);
-          return (
-            <pre key={index} className="markdown-code-block">
-              {lang && <div className="markdown-code-lang">{lang}</div>}
-              <code>{code.trim()}</code>
-            </pre>
-          );
+          return <CodeBlock key={index} code={code} lang={lang} />;
         } else {
           const rawLines = part.split(/\r?\n/);
           const blocks = [];
