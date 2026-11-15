@@ -296,6 +296,17 @@ test("issue 85: chat shows reasoning, scrolls only the message list, renders tab
   assert.match(server, /async function planWebSearchQuery/);
 });
 
+test("issue 105: chat renders syntax-highlighted code blocks with copy support", () => {
+  const chat = read("app/frontend/src/components/TextChat.jsx");
+  const pkg = JSON.parse(read("app/frontend/package.json"));
+  assert.ok(pkg.dependencies.prismjs, "prismjs must be in frontend dependencies");
+  assert.match(chat, /import Prism from "prismjs"/);
+  assert.match(chat, /prism-tomorrow\.css/);
+  assert.match(chat, /Prism\.highlight/);
+  assert.match(chat, /markdown-code-copy-btn/);
+  assert.match(chat, /markdown-code-wrapper/);
+});
+
 test("issue 82: speech upload converts any browser-decodable audio to 16 kHz WAV", () => {
   const speech = read("app/frontend/src/components/SpeechTranscriber.jsx");
   assert.match(speech, /convertAudioFileTo16kWav/);
